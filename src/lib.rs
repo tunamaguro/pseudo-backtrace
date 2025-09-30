@@ -1,5 +1,6 @@
 #![no_std]
 
+/// One layer in a stack of chained errors.
 #[derive(Debug, Clone)]
 pub enum ErrorDetail<'a> {
     Stacked(&'a dyn StackError),
@@ -7,6 +8,7 @@ pub enum ErrorDetail<'a> {
 }
 
 impl<'a> ErrorDetail<'a> {
+    /// Returns the underlying error for this stack layer.
     pub fn source(&'a self) -> &'a dyn core::error::Error {
         match self {
             ErrorDetail::Stacked(stack_error) => stack_error,
@@ -14,6 +16,7 @@ impl<'a> ErrorDetail<'a> {
         }
     }
 
+    /// Returns the recorded source location when available.
     pub fn location(&self) -> Option<&'static core::panic::Location<'static>> {
         match self {
             ErrorDetail::Stacked(stack_error) => Some(stack_error.location()),
@@ -22,17 +25,22 @@ impl<'a> ErrorDetail<'a> {
     }
 }
 
-pub trait StackError: core::error::Error {
-    /// Returns the source location of this error
-    fn location(&self) -> &'static core::panic::Location<'static>;
-    /// Return next level error
-    fn next<'a>(&'a self) -> Option<ErrorDetail<'a>>;
-    fn to_detail<'a>(&'a self) -> ErrorDetail<'a>
-    where
-        Self: Sized,
-    {
-        ErrorDetail::Stacked(self)
+impl<'a, E> From<&'a E> for ErrorDetail<'a>
+where
+    E: StackError + Sized,
+{
+    fn from(stack_error: &'a E) -> Self {
+        ErrorDetail::Stacked(stack_error)
     }
+}
+
+/// Error types that can report a stack trace-like chain.
+pub trait StackError: core::error::Error {
+    /// Returns the source location of this error.
+    fn location(&self) -> &'static core::panic::Location<'static>;
+    /// Returns the next detail in the stack, if any.
+    fn next<'a>(&'a self) -> Option<ErrorDetail<'a>>;
+    /// Creates an iterator over this error's stack details.
     fn iter<'a>(&'a self) -> Iter<'a>
     where
         Self: Sized,
@@ -41,6 +49,7 @@ pub trait StackError: core::error::Error {
     }
 }
 
+/// Iterator over individual error stack entries.
 #[derive(Debug, Clone)]
 pub struct Iter<'a> {
     source: Option<ErrorDetail<'a>>,
@@ -76,6 +85,7 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
+/// Formatter for a single stack layer that remembers its index.
 #[derive(Debug, Clone)]
 pub struct StackWriter<'a> {
     layer: usize,
@@ -83,9 +93,11 @@ pub struct StackWriter<'a> {
 }
 
 impl<'a> StackWriter<'a> {
+    /// Returns the zero-based layer index for this entry.
     pub fn layer(&self) -> usize {
         self.layer
     }
+    /// Returns the error detail captured for this layer.
     pub fn detail(&'a self) -> ErrorDetail<'a> {
         self.source.clone()
     }
@@ -110,6 +122,7 @@ impl<'a> core::fmt::Display for StackWriter<'a> {
     }
 }
 
+/// Iterator adapter that yields formatted stack entries.
 #[derive(Debug, Clone)]
 pub struct StackChain<'a> {
     layer: usize,
@@ -156,22 +169,25 @@ impl<'a> core::fmt::Display for StackChain<'a> {
     }
 }
 
+/// Convenience helpers for types implementing [`StackError`].
 pub trait StackErrorExt: StackError {
+    /// Returns a [`StackChain`] that walks this error stack from the top.
     fn to_chain<'a>(&'a self) -> StackChain<'a>
     where
         Self: Sized,
     {
         StackChain {
             layer: 0,
-            source: self.to_detail(),
+            source: ErrorDetail::from(self),
         }
     }
 
+    /// Returns the deepest [`ErrorDetail`] in the chain.
     fn last<'a>(&'a self) -> ErrorDetail<'a>
     where
         Self: Sized,
     {
-        let mut detail = self.to_detail();
+        let mut detail = ErrorDetail::from(self);
         while let Some(next) = self.next() {
             detail = next;
         }
