@@ -196,3 +196,5 @@ pub trait StackErrorExt: StackError {
         detail
     }
 }
+
+impl<E: StackError> StackErrorExt for E {}
