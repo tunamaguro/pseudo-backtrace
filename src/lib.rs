@@ -141,7 +141,7 @@ where
     }
 
     fn next<'a>(&'a self) -> Option<ErrorDetail<'a>> {
-        self.source.source().map(|e| ErrorDetail::End(e))
+        self.source.source().map(ErrorDetail::End)
     }
 }
 
