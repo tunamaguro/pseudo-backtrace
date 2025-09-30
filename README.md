@@ -80,7 +80,8 @@ impl From<ErrorB> for ErrorC {
     }
 }
 
-fn main() {
+
+# fn main() {
     let a = ErrorA(());
     let b = ErrorB::from(a);
     let c = ErrorC::from(b);
@@ -90,7 +91,7 @@ fn main() {
     // 0: ErrorC, at examples/simple.rs:74:13
     // 1: ErrorB, at examples/simple.rs:73:13
     // 2: ErrorA
-}
+# }
 ```
 
 ## Using `#[derive(StackError)]`
