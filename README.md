@@ -81,6 +81,10 @@ fn main() {
     let c = ErrorC::from(b);
 
     println!("{}", c.to_chain())
+    // will be printed to standard output as follows:
+    // 0: ErrorC, at examples/simple.rs:74:13
+    // 1: ErrorB, at examples/simple.rs:73:13
+    // 2: ErrorA
 }
 ```
 
