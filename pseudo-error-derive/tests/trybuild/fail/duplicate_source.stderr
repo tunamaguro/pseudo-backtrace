@@ -1,0 +1,5 @@
+error: multiple fields marked with #[source]
+  --> tests/trybuild/fail/duplicate_source.rs:12:5
+   |
+12 |     #[source]
+   |     ^

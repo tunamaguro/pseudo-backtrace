@@ -44,7 +44,7 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
     };
 
     let fields = collect_fields(&data.fields)?;
-    let location_index = resolve_location(&fields, style.allows_names())?;
+    let location_index = resolve_location(&fields, style.allows_names(), ident.span())?;
     let source = resolve_source(&fields, style.allows_names())?;
 
     let mut generics = generics;
@@ -103,13 +103,14 @@ fn expand_enum(ident: Ident, generics: Generics, data: DataEnum) -> syn::Result<
             }
         };
 
-        let location_index = match resolve_location(&fields, style.allows_names()) {
-            Ok(index) => index,
-            Err(err) => {
-                errors = combine_error(errors, err);
-                continue;
-            }
-        };
+        let location_index =
+            match resolve_location(&fields, style.allows_names(), variant.ident.span()) {
+                Ok(index) => index,
+                Err(err) => {
+                    errors = combine_error(errors, err);
+                    continue;
+                }
+            };
 
         let source = match resolve_source(&fields, style.allows_names()) {
             Ok(source) => source,
@@ -323,7 +324,11 @@ fn parse_field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
     Ok(attrs)
 }
 
-fn resolve_location(fields: &[FieldInfo], allow_name: bool) -> syn::Result<usize> {
+fn resolve_location(
+    fields: &[FieldInfo],
+    allow_name: bool,
+    missing_span: Span,
+) -> syn::Result<usize> {
     let mut index = None;
 
     for (idx, field) in fields.iter().enumerate() {
@@ -352,13 +357,8 @@ fn resolve_location(fields: &[FieldInfo], allow_name: bool) -> syn::Result<usize
         }
     }
 
-    let span = fields
-        .first()
-        .map(|field| field.span)
-        .unwrap_or_else(Span::call_site);
-
     Err(syn::Error::new(
-        span,
+        missing_span,
         "missing #[location] attribute or field named `location`",
     ))
 }
