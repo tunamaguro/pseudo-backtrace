@@ -93,3 +93,4 @@ Deriving requires three kinds of fields:
 
 The macro infers `#[location]` and `#[source]` from the field names `location` and `source` when attributes are omitted. Unit structs and variants are rejected because they cannot point to a location.
 
+Since the macro only implements `StackError`, the [Error] implementation must be provided by the user.

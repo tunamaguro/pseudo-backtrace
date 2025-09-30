@@ -1,11 +1,15 @@
 #![no_std]
+#![warn(missing_docs)]
+#![doc = "README.md"]
 
 pub use pseudo_backtrace_derive::StackError;
 
 /// One layer in a stack of chained errors.
 #[derive(Debug, Clone)]
 pub enum ErrorDetail<'a> {
+    /// A stacked error
     Stacked(&'a dyn StackError),
+    /// A [core::error::Error]. [StackError] will not backtraces any further
     End(&'a dyn core::error::Error),
 }
 
