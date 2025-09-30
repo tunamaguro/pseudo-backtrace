@@ -15,6 +15,7 @@ repository = { workspace = true }
 pseudo-backtrace-derive = { version = "=0.1.0", path = "pseudo-backtrace-derive" }
 
 [dev-dependencies]
+thiserror = "2.0"
 trybuild = "1.0.111"
 
 [workspace.package]
