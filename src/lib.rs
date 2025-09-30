@@ -78,11 +78,8 @@ impl<'a> Iterator for Iter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.source.take() {
             Some(detail) => {
-                match &detail {
-                    ErrorDetail::Stacked(stack_error) => {
-                        self.source = stack_error.next();
-                    }
-                    _ => {}
+                if let ErrorDetail::Stacked(stack_error) = &detail {
+                    self.source = stack_error.next();
                 };
                 Some(detail)
             }
