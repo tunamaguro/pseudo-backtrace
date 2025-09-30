@@ -88,6 +88,73 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
+/// Wrapper that records the call-site for any `core::error::Error` and exposes it as a [`StackError`].
+///
+/// This is useful when you already have an error type that implements [`core::error::Error`] but cannot be modified to derive [`StackError`].
+///
+/// # Examples
+/// ```
+/// # extern crate std;
+/// use pseudo_backtrace::{LocatedError, StackError};
+///
+/// fn assert_stack_error<T:StackError>(){}
+///     
+/// assert_stack_error::<LocatedError<std::io::Error>>();
+/// ```
+#[derive(Debug)]
+pub struct LocatedError<E> {
+    source: E,
+    location: &'static core::panic::Location<'static>,
+}
+
+impl<E> LocatedError<E> {
+    /// Returns the inner value
+    pub fn into_inner(self) -> E {
+        self.source
+    }
+}
+
+impl<E> core::fmt::Display for LocatedError<E>
+where
+    E: core::fmt::Display,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.source.fmt(f)
+    }
+}
+
+impl<E> core::error::Error for LocatedError<E>
+where
+    E: core::error::Error,
+{
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+        self.source.source()
+    }
+}
+
+impl<E> StackError for LocatedError<E>
+where
+    E: core::error::Error,
+{
+    fn location(&self) -> &'static core::panic::Location<'static> {
+        self.location
+    }
+
+    fn next<'a>(&'a self) -> Option<ErrorDetail<'a>> {
+        self.source.source().map(|e| ErrorDetail::End(e))
+    }
+}
+
+impl<E> From<E> for LocatedError<E> {
+    #[track_caller]
+    fn from(value: E) -> Self {
+        LocatedError {
+            source: value,
+            location: core::panic::Location::caller(),
+        }
+    }
+}
+
 /// Formatter for a single stack layer that remembers its index.
 #[derive(Debug, Clone)]
 pub struct StackWriter<'a> {

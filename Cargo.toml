@@ -2,9 +2,10 @@
 members = ["./pseudo-backtrace-derive"]
 resolver = "3"
 
-
 [package]
 name = "pseudo-backtrace"
+description = "Utilities for constructing stack-like error chains with caller locations"
+categories = ["no-std"]
 version = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
