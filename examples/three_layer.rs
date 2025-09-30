@@ -14,7 +14,7 @@ impl LeafError {
     #[track_caller]
     fn new() -> Self {
         Self {
-            cause: std::io::Error::new(std::io::ErrorKind::Other, "leaf exploded"),
+            cause: std::io::Error::other("leaf exploded"),
             location: Location::caller(),
         }
     }

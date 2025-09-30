@@ -1,5 +1,6 @@
 [package]
 name = "pseudo-backtrace-derive"
+description = "derive implementation for `StackError`"
 version = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }

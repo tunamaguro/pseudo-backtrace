@@ -21,7 +21,7 @@ impl LeafError {
     fn new(message: &'static str) -> Self {
         Self {
             message,
-            source: std::io::Error::new(std::io::ErrorKind::Other, "device failure"),
+            source: std::io::Error::other("device failure"),
             location: Location::caller(),
         }
     }
