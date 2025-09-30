@@ -352,9 +352,9 @@ fn resolve_location(
             .iter()
             .enumerate()
             .find(|(_, field)| matches!(&field.ident, Some(ident) if ident == "location"))
-        {
-            return Ok(idx);
-        }
+    {
+        return Ok(idx);
+    }
 
     Err(syn::Error::new(
         missing_span,
@@ -412,12 +412,12 @@ fn resolve_source(fields: &[FieldInfo], allow_name: bool) -> syn::Result<Option<
             .iter()
             .enumerate()
             .find(|(_, field)| matches!(&field.ident, Some(ident) if ident == "source"))
-        {
-            return Ok(Some(SourceInfo {
-                index: idx,
-                is_terminal: false,
-            }));
-        }
+    {
+        return Ok(Some(SourceInfo {
+            index: idx,
+            is_terminal: false,
+        }));
+    }
 
     Ok(None)
 }
@@ -588,13 +588,14 @@ struct TypeParamCollector<'a> {
 impl<'a, 'ast> Visit<'ast> for TypeParamCollector<'a> {
     fn visit_type_path(&mut self, type_path: &'ast syn::TypePath) {
         if type_path.qself.is_none()
-            && let Some(segment) = type_path.path.segments.first() {
-                let ident = &segment.ident;
-                let name = ident.to_string();
-                if self.params.contains_key(&name) {
-                    self.found.insert(name);
-                }
+            && let Some(segment) = type_path.path.segments.first()
+        {
+            let ident = &segment.ident;
+            let name = ident.to_string();
+            if self.params.contains_key(&name) {
+                self.found.insert(name);
             }
+        }
 
         syn::visit::visit_type_path(self, type_path);
     }
