@@ -1,6 +1,6 @@
 #![no_std]
 #![warn(missing_docs)]
-#![doc = "README.md"]
+#![doc = include_str!("../README.md")]
 
 pub use pseudo_backtrace_derive::StackError;
 
