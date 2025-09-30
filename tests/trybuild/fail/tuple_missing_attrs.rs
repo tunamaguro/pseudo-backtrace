@@ -1,4 +1,4 @@
-use pseudo_backtrace_derive::StackError;
+use pseudo_backtrace::StackError;
 
 #[derive(Debug, StackError)]
 struct TupleMissingAttrs(std::io::Error, &'static core::panic::Location<'static>);

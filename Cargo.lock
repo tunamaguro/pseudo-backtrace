@@ -56,6 +56,7 @@ name = "pseudo-backtrace"
 version = "0.1.0"
 dependencies = [
  "pseudo-backtrace-derive",
+ "trybuild",
 ]
 
 [[package]]

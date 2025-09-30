@@ -1,4 +1,4 @@
-use pseudo_backtrace_derive::StackError;
+use pseudo_backtrace::StackError;
 
 #[track_caller]
 fn location() -> &'static core::panic::Location<'static> {

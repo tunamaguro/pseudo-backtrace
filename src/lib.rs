@@ -1,5 +1,7 @@
 #![no_std]
 
+pub use pseudo_backtrace_derive::StackError;
+
 /// One layer in a stack of chained errors.
 #[derive(Debug, Clone)]
 pub enum ErrorDetail<'a> {
