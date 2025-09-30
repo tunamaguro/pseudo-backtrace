@@ -1,5 +1,10 @@
 # pseudo-backtrace
 
+![Crates.io Version](https://img.shields.io/crates/v/pseudo-backtrace)
+![docs.rs](https://img.shields.io/docsrs/pseudo-backtrace)
+![Crates.io License](https://img.shields.io/crates/l/pseudo-backtrace)
+
+
 This is a library that makes it easy to create error types that can track error propagation history.
 
 ## Example
