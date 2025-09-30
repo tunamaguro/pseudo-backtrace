@@ -1,0 +1,5 @@
+error: multiple fields marked with #[location]
+ --> tests/trybuild/fail/duplicate_location.rs:7:5
+  |
+7 |     #[location]
+  |     ^

@@ -38,7 +38,7 @@ where
 pub trait StackError: core::error::Error {
     /// Returns the source location of this error.
     fn location(&self) -> &'static core::panic::Location<'static>;
-    /// Returns the next detail in the stack, if any.
+    /// Returns the next detail in the stack.
     fn next<'a>(&'a self) -> Option<ErrorDetail<'a>>;
     /// Creates an iterator over this error's stack details.
     fn iter<'a>(&'a self) -> Iter<'a>

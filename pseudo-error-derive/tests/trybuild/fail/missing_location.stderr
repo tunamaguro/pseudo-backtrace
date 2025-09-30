@@ -1,0 +1,5 @@
+error: missing #[location] attribute or field named `location`
+ --> tests/trybuild/fail/missing_location.rs:5:5
+  |
+5 |     #[stack_error(end)]
+  |     ^

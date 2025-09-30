@@ -1,0 +1,18 @@
+[package]
+name = "pseudo-error-derive"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.74"
+quote = "1.0.35"
+syn = { version = "2.0.87", features = ["full", "visit"] }
+
+[dev-dependencies]
+pseudo-backtrace = { path = ".." }
+trybuild = "1.0.111"
