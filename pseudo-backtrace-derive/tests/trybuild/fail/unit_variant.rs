@@ -1,4 +1,4 @@
-use pseudo_error_derive::StackError;
+use pseudo_backtrace_derive::StackError;
 
 #[derive(Debug, StackError)]
 enum UnitVariant {

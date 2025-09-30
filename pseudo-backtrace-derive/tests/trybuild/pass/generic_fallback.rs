@@ -1,4 +1,4 @@
-use pseudo_error_derive::StackError;
+use pseudo_backtrace_derive::StackError;
 use pseudo_backtrace::StackError as StackErrorTrait;
 
 #[track_caller]

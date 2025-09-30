@@ -54,9 +54,12 @@ dependencies = [
 [[package]]
 name = "pseudo-backtrace"
 version = "0.1.0"
+dependencies = [
+ "pseudo-backtrace-derive",
+]
 
 [[package]]
-name = "pseudo-error-derive"
+name = "pseudo-backtrace-derive"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",

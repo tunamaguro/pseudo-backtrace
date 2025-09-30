@@ -1,5 +1,5 @@
 [workspace]
-members = ["./pseudo-error-derive"]
+members = ["./pseudo-backtrace-derive"]
 resolver = "3"
 
 [workspace.package]
@@ -17,3 +17,4 @@ repository = { workspace = true }
 
 
 [dependencies]
+pseudo-backtrace-derive = { version = "=0.1.0", path = "pseudo-backtrace-derive" }
