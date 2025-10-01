@@ -110,3 +110,54 @@ Deriving `StackError` requires two types of fields:
      - `#[source]` or a field named `source`: Defaults to `#[stack_error(stacked)]`.
 
 Note that the macro only implements `StackError`, so users must manually implement `core::error::Error`.
+
+### Using `LocatedError` as both `location` and `source`
+
+You can embed a `LocatedError<T>` field and use it for both the `location` and the `source` in one of the following ways:
+
+- Explicitly mark the same field with both attributes:
+
+```rust
+#[derive(Debug, pseudo_backtrace::StackError)]
+pub struct WrappedIo {
+    #[location]
+    #[source] // or `#[stack_error(stacked)]` / `#[stack_error(std)]`
+    inner: pseudo_backtrace::LocatedError<std::io::Error>,
+}
+
+impl core::fmt::Display for WrappedIo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "wrapped-io")
+    }
+}
+
+impl core::error::Error for WrappedIo {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.inner)
+    }
+}
+```
+
+- Or, if you omit an explicit `#[location]`, the derive will automatically use the `#[source]` field when its type is `LocatedError<_>` as the location provider:
+
+```rust
+#[derive(Debug, pseudo_backtrace::StackError)]
+pub struct WrappedIo {
+    #[source]
+    inner: pseudo_backtrace::LocatedError<std::io::Error>,
+}
+
+impl core::fmt::Display for WrappedIo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "wrapped-io")
+    }
+}
+
+impl core::error::Error for WrappedIo {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.inner)
+    }
+}
+```
+
+In both cases, the generated `impl StackError` will return `inner.location()` as the location and will chain to `inner` as the next error.

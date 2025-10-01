@@ -44,7 +44,20 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
     };
 
     let fields = collect_fields(&data.fields)?;
-    let location_index = resolve_location(&fields, style.allows_names(), ident.span())?;
+    let allow_name = style.allows_names();
+    let has_explicit_location = fields.iter().enumerate().any(|(_, f)| {
+        f.attrs.is_location || (allow_name && matches!(&f.ident, Some(id) if id == "location"))
+    });
+    let location_index = if has_explicit_location {
+        // Defer to the existing resolver and propagate its specific errors
+        resolve_location(&fields, allow_name, ident.span())?
+    } else {
+        // Try implicit LocatedError-based fallback
+        resolve_location_from_located_source(&fields, allow_name).or_else(|| single_field_located(&fields)).ok_or_else(|| syn::Error::new(
+            ident.span(),
+            "missing #[location] attribute or field named `location`",
+        ))?
+    };
     let source = resolve_source(&fields, style.allows_names())?;
 
     let mut generics = generics;
@@ -55,6 +68,11 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
     bounds.apply(&mut generics);
 
     let location_member = &fields[location_index].member;
+    let location_expr = if is_located_error(&fields[location_index].ty) {
+        quote! { ::pseudo_backtrace::StackError::location(&self.#location_member) }
+    } else {
+        quote! { self.#location_member }
+    };
     let next_body = match &source {
         Some(info) => build_next_struct(
             &fields[info.index].member,
@@ -69,7 +87,7 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
     Ok(quote! {
         impl #impl_generics ::pseudo_backtrace::StackError for #ident #ty_generics #where_clause {
             fn location(&self) -> &'static ::core::panic::Location<'static> {
-                self.#location_member
+                #location_expr
             }
 
             fn next<'pseudo_backtrace>(&'pseudo_backtrace self) -> ::core::option::Option<::pseudo_backtrace::Chain<'pseudo_backtrace>> {
@@ -109,14 +127,28 @@ fn expand_enum(ident: Ident, generics: Generics, data: DataEnum) -> syn::Result<
             }
         };
 
-        let location_index =
-            match resolve_location(&fields, style.allows_names(), variant.ident.span()) {
-                Ok(index) => index,
+        let allow_name = style.allows_names();
+        let has_explicit_location = fields.iter().enumerate().any(|(_, f)| {
+            f.attrs.is_location || (allow_name && matches!(&f.ident, Some(id) if id == "location"))
+        });
+        let location_index = if has_explicit_location {
+            match resolve_location(&fields, allow_name, variant.ident.span()) {
+                Ok(index) => Some(index),
                 Err(err) => {
                     errors = combine_error(errors, err);
-                    continue;
+                    None
                 }
-            };
+            }
+        } else {
+            resolve_location_from_located_source(&fields, allow_name).or_else(|| single_field_located(&fields))
+        };
+        let Some(location_index) = location_index else {
+            errors = combine_error(errors, syn::Error::new(
+                variant.ident.span(),
+                "missing #[location] attribute or field named `location`",
+            ));
+            continue;
+        };
 
         let source = match resolve_source(&fields, style.allows_names()) {
             Ok(source) => source,
@@ -157,7 +189,7 @@ fn expand_enum(ident: Ident, generics: Generics, data: DataEnum) -> syn::Result<
     let location_arms = variant_infos.iter().map(|variant| {
         let variant_ident = &variant.ident;
         let pattern = variant.location_pattern();
-        let value = &variant.location_binding;
+        let value = variant.location_value_expr();
         quote! {
             Self::#variant_ident #pattern => #value
         }
@@ -498,6 +530,16 @@ impl VariantInfo {
         }
     }
 
+    fn location_value_expr(&self) -> TokenStream2 {
+        let binding = &self.location_binding;
+        let ty = &self.fields[self.location_index].ty;
+        if is_located_error(ty) {
+            quote! { ::pseudo_backtrace::StackError::location(#binding) }
+        } else {
+            quote! { #binding }
+        }
+    }
+
     fn source_pattern(&self) -> TokenStream2 {
         match &self.source {
             Some(source) => match self.style {
@@ -599,6 +641,55 @@ fn type_parameter_of_option(ty: &syn::Type) -> Option<&syn::Type> {
     match &args.args[0] {
         syn::GenericArgument::Type(inner) => Some(inner),
         _ => None,
+    }
+}
+
+// Returns true if the type is `LocatedError<..>` (ignoring full path qualifiers)
+fn is_located_error(ty: &syn::Type) -> bool {
+    // Peel references like `&T` for robustness
+    let ty = match ty {
+        syn::Type::Reference(r) => &*r.elem,
+        _ => ty,
+    };
+
+    let syn::Type::Path(type_path) = ty else { return false; };
+    let Some(last) = type_path.path.segments.last() else { return false; };
+    last.ident == "LocatedError"
+}
+
+// When no explicit `#[location]` exists, allow using a `LocatedError<_>` field
+// that is also marked as a source field as the location provider.
+fn resolve_location_from_located_source(fields: &[FieldInfo], allow_name: bool) -> Option<usize> {
+    // candidates are fields that are explicitly sources or named `source`
+    let mut candidates: Vec<usize> = Vec::new();
+    for (idx, field) in fields.iter().enumerate() {
+        if field.attrs.is_source || field.attrs.is_terminal {
+            candidates.push(idx);
+            continue;
+        }
+        if allow_name {
+            if let Some(ident) = &field.ident {
+                if ident == "source" {
+                    candidates.push(idx);
+                }
+            }
+        }
+    }
+
+    // Choose the first candidate whose type is LocatedError<_>
+    let picked = candidates.into_iter().find(|&idx| is_located_error(&fields[idx].ty));
+    if picked.is_some() {
+        return picked;
+    }
+    None
+}
+
+// Fallback: if there is exactly one field and it's LocatedError<_>, use it as location
+fn single_field_located(fields: &[FieldInfo]) -> Option<usize> {
+    if fields.len() == 1 && is_located_error(&fields[0].ty) {
+        Some(0)
+    } else {
+        None
     }
 }
 
