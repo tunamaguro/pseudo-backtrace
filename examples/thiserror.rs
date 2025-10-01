@@ -11,7 +11,7 @@ use thiserror::Error;
 #[error("leaf layer: {message}")]
 struct LeafError {
     message: &'static str,
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: std::io::Error,
     location: &'static Location<'static>,
 }

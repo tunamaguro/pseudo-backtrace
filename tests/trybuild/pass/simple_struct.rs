@@ -7,7 +7,7 @@ fn location() -> &'static core::panic::Location<'static> {
 
 #[derive(Debug, StackError)]
 pub struct LeafError {
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: std::io::Error,
     #[location]
     location: &'static core::panic::Location<'static>,

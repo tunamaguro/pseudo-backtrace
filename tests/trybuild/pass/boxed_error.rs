@@ -2,7 +2,7 @@ use pseudo_backtrace::StackError;
 
 #[derive(Debug, StackError)]
 struct BoxError {
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: Box<dyn core::error::Error>,
     location: &'static core::panic::Location<'static>,
 }

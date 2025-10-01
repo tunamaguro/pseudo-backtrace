@@ -25,7 +25,7 @@ impl core::error::Error for ErrorA {}
 
 #[derive(Debug, StackError)]
 pub struct ErrorB {
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: ErrorA,
     location: &'static core::panic::Location<'static>,
 }
@@ -99,7 +99,7 @@ Deriving requires three kinds of fields:
 
 - `#[location]` for an `&'static core::panic::Location<'static>` captured with `#[track_caller]`.
 - `#[source]` for the next layer that also implements `StackError`.
-- `#[stack_error(end)]` for a terminal source that only implements `std::error::Error`.
+- `#[stack_error(std)]` for a source that only implements `std::error::Error`.
 
 The macro infers `#[location]` and `#[source]` from the field names `location` and `source` when attributes are omitted. Unit structs and variants are rejected because they cannot point to a location.
 

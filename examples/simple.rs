@@ -13,7 +13,7 @@ impl core::error::Error for ErrorA {}
 
 #[derive(Debug, StackError)]
 pub struct ErrorB {
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: ErrorA,
     location: &'static core::panic::Location<'static>,
 }

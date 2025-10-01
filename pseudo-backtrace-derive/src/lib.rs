@@ -302,20 +302,32 @@ fn parse_field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
         if attr.path().is_ident("stack_error") {
             match attr.parse_args_with(|input: syn::parse::ParseStream| {
                 let ident: Ident = input.parse()?;
-                if ident == "end" {
-                    Ok(())
+                if ident == "std" {
+                    Ok((true, ident.span()))
+                } else if ident == "stacked" {
+                    Ok((false, ident.span()))
                 } else {
-                    Err(syn::Error::new(ident.span(), "expected `end`"))
+                    Err(syn::Error::new(ident.span(), "expected `std` or `stacked`"))
                 }
             }) {
-                Ok(()) => {
-                    if attrs.is_terminal {
-                        return Err(syn::Error::new_spanned(
-                            attr,
-                            "duplicate #[stack_error(end)] attribute",
-                        ));
+                Ok((is_std, _span)) => {
+                    if is_std {
+                        if attrs.is_terminal {
+                            return Err(syn::Error::new_spanned(
+                                attr,
+                                "duplicate #[stack_error(std)] attribute",
+                            ));
+                        }
+                        attrs.is_terminal = true;
+                    } else {
+                        if attrs.is_source {
+                            return Err(syn::Error::new_spanned(
+                                attr,
+                                "duplicate #[stack_error(stacked)] attribute",
+                            ));
+                        }
+                        attrs.is_source = true;
                     }
-                    attrs.is_terminal = true;
                 }
                 Err(err) => {
                     return Err(syn::Error::new_spanned(
@@ -404,7 +416,7 @@ fn resolve_source(fields: &[FieldInfo], allow_name: bool) -> syn::Result<Option<
         let span = fields[terminal_candidates[1]].span;
         return Err(syn::Error::new(
             span,
-            "multiple fields marked with #[stack_error(end)]",
+            "multiple fields marked with #[stack_error(std)]",
         ));
     }
 
