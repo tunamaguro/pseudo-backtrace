@@ -45,7 +45,7 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
 
     let fields = collect_fields(&data.fields)?;
     let allow_name = style.allows_names();
-    let has_explicit_location = fields.iter().enumerate().any(|(_, f)| {
+    let has_explicit_location = fields.iter().any(|f| {
         f.attrs.is_location || (allow_name && matches!(&f.ident, Some(id) if id == "location"))
     });
     let location_index = if has_explicit_location {
@@ -53,10 +53,14 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
         resolve_location(&fields, allow_name, ident.span())?
     } else {
         // Try implicit LocatedError-based fallback
-        resolve_location_from_located_source(&fields, allow_name).or_else(|| single_field_located(&fields)).ok_or_else(|| syn::Error::new(
-            ident.span(),
-            "missing #[location] attribute or field named `location`",
-        ))?
+        resolve_location_from_located_source(&fields, allow_name)
+            .or_else(|| single_field_located(&fields))
+            .ok_or_else(|| {
+                syn::Error::new(
+                    ident.span(),
+                    "missing #[location] attribute or field named `location`",
+                )
+            })?
     };
     let source = resolve_source(&fields, style.allows_names())?;
 
@@ -128,7 +132,7 @@ fn expand_enum(ident: Ident, generics: Generics, data: DataEnum) -> syn::Result<
         };
 
         let allow_name = style.allows_names();
-        let has_explicit_location = fields.iter().enumerate().any(|(_, f)| {
+        let has_explicit_location = fields.iter().any(|f| {
             f.attrs.is_location || (allow_name && matches!(&f.ident, Some(id) if id == "location"))
         });
         let location_index = if has_explicit_location {
@@ -140,13 +144,17 @@ fn expand_enum(ident: Ident, generics: Generics, data: DataEnum) -> syn::Result<
                 }
             }
         } else {
-            resolve_location_from_located_source(&fields, allow_name).or_else(|| single_field_located(&fields))
+            resolve_location_from_located_source(&fields, allow_name)
+                .or_else(|| single_field_located(&fields))
         };
         let Some(location_index) = location_index else {
-            errors = combine_error(errors, syn::Error::new(
-                variant.ident.span(),
-                "missing #[location] attribute or field named `location`",
-            ));
+            errors = combine_error(
+                errors,
+                syn::Error::new(
+                    variant.ident.span(),
+                    "missing #[location] attribute or field named `location`",
+                ),
+            );
             continue;
         };
 
@@ -652,8 +660,12 @@ fn is_located_error(ty: &syn::Type) -> bool {
         _ => ty,
     };
 
-    let syn::Type::Path(type_path) = ty else { return false; };
-    let Some(last) = type_path.path.segments.last() else { return false; };
+    let syn::Type::Path(type_path) = ty else {
+        return false;
+    };
+    let Some(last) = type_path.path.segments.last() else {
+        return false;
+    };
     last.ident == "LocatedError"
 }
 
@@ -667,17 +679,18 @@ fn resolve_location_from_located_source(fields: &[FieldInfo], allow_name: bool) 
             candidates.push(idx);
             continue;
         }
-        if allow_name {
-            if let Some(ident) = &field.ident {
-                if ident == "source" {
-                    candidates.push(idx);
-                }
-            }
+        if allow_name
+            && let Some(ident) = &field.ident
+            && ident == "source"
+        {
+            candidates.push(idx);
         }
     }
 
     // Choose the first candidate whose type is LocatedError<_>
-    let picked = candidates.into_iter().find(|&idx| is_located_error(&fields[idx].ty));
+    let picked = candidates
+        .into_iter()
+        .find(|&idx| is_located_error(&fields[idx].ty));
     if picked.is_some() {
         return picked;
     }
