@@ -286,7 +286,7 @@ pub trait StackErrorExt: StackError + Sized {
     /// 4: StdError B
     /// 5: StdError C
     /// ```
-    fn last_stacked<'a>(&'a self) -> &'a dyn StackError {
+    fn last_stacked(&self) -> &dyn StackError {
         self.iter()
             .filter_map(|e| match e {
                 Chain::Stacked(stack_error) => Some(stack_error),
@@ -308,7 +308,7 @@ pub trait StackErrorExt: StackError + Sized {
     /// 4: StdError B
     /// 5: StdError C
     /// ```
-    fn last_std<'a>(&'a self) -> Option<&'a dyn core::error::Error> {
+    fn last_std(&self) -> Option<&dyn core::error::Error> {
         self.iter()
             .filter_map(|e| match e {
                 Chain::Std(error) => Some(error),
@@ -323,8 +323,6 @@ impl<E: StackError> StackErrorExt for E {}
 #[cfg(test)]
 mod tests {
     extern crate std;
-
-    use core::usize;
 
     use super::{Chain, StackError, StackErrorExt};
     #[derive(Debug)]
