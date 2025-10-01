@@ -198,7 +198,7 @@ impl<'a> core::fmt::Display for ChainWriter<'a> {
             .enumerate()
             .take_while(move |_| std_count < self.std_limit)
         {
-            write!(f, "{}: {}", i, err)?;
+            writeln!(f, "{}: {}", i, err)?;
         }
 
         Ok(())
