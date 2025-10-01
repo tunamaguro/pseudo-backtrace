@@ -310,7 +310,7 @@ pub trait StackErrorExt: StackError + Sized {
     /// 4: StdError B
     /// 5: StdError C
     /// ```
-    fn last_std(&self) -> Option<&dyn core::error::Error> {
+    fn first_std(&self) -> Option<&dyn core::error::Error> {
         self.iter()
             .filter_map(|e| match e {
                 Chain::Std(error) => Some(error),
