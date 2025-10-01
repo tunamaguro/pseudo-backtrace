@@ -2,6 +2,7 @@ use pseudo_backtrace::StackError;
 
 #[derive(Debug, StackError)]
 struct ErrorOpt<'a> {
+    #[stack_error(end)]
     source: Option<&'a (dyn core::error::Error + 'static)>,
     location: &'static core::panic::Location<'static>,
 }
