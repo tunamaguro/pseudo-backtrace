@@ -68,7 +68,7 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
                 self.#location_member
             }
 
-            fn next<'a>(&'a self) -> ::core::option::Option<::pseudo_backtrace::ErrorDetail<'a>> {
+            fn next<'a>(&'a self) -> ::core::option::Option<::pseudo_backtrace::ErrorChain<'a>> {
                 #next_body
             }
         }
@@ -176,7 +176,7 @@ fn expand_enum(ident: Ident, generics: Generics, data: DataEnum) -> syn::Result<
                 }
             }
 
-            fn next<'a>(&'a self) -> ::core::option::Option<::pseudo_backtrace::ErrorDetail<'a>> {
+            fn next<'a>(&'a self) -> ::core::option::Option<::pseudo_backtrace::ErrorChain<'a>> {
                 match self {
                     #(#next_arms,)*
                 }
@@ -425,13 +425,13 @@ fn resolve_source(fields: &[FieldInfo], allow_name: bool) -> syn::Result<Option<
 fn build_next_struct(member: &Member, is_terminal: bool) -> TokenStream2 {
     if is_terminal {
         quote! {
-            ::core::option::Option::Some(::pseudo_backtrace::ErrorDetail::End(
+            ::core::option::Option::Some(::pseudo_backtrace::ErrorChain::Std(
                 &self.#member as &'a dyn ::core::error::Error,
             ))
         }
     } else {
         quote! {
-            ::core::option::Option::Some(::pseudo_backtrace::ErrorDetail::Stacked(
+            ::core::option::Option::Some(::pseudo_backtrace::ErrorChain::Stacked(
                 &self.#member as &'a dyn ::pseudo_backtrace::StackError,
             ))
         }
@@ -513,13 +513,13 @@ impl VariantInfo {
                     .expect("source binding missing");
                 if source.is_terminal {
                     quote! {
-                        ::core::option::Option::Some(::pseudo_backtrace::ErrorDetail::End(
+                        ::core::option::Option::Some(::pseudo_backtrace::ErrorChain::Std(
                             #binding as &'a dyn ::core::error::Error,
                         ))
                     }
                 } else {
                     quote! {
-                        ::core::option::Option::Some(::pseudo_backtrace::ErrorDetail::Stacked(
+                        ::core::option::Option::Some(::pseudo_backtrace::ErrorChain::Stacked(
                             #binding as &'a dyn ::pseudo_backtrace::StackError,
                         ))
                     }
