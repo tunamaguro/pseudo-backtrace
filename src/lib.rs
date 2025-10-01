@@ -3,6 +3,8 @@
 #![doc = include_str!("../README.md")]
 
 pub use pseudo_backtrace_derive::StackError;
+#[doc(hidden)]
+pub mod private;
 
 /// One layer in a stack of chained errors.
 #[derive(Debug, Clone)]
