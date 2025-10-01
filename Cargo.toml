@@ -15,7 +15,7 @@ repository = { workspace = true }
 
 
 [dependencies]
-pseudo-backtrace-derive = { version = "=0.1.1", path = "pseudo-backtrace-derive" }
+pseudo-backtrace-derive = { version = "=0.2.0", path = "pseudo-backtrace-derive" }
 
 [dev-dependencies]
 thiserror = "2.0"
@@ -23,7 +23,7 @@ trybuild = "1.0.111"
 
 [workspace.package]
 rust-version = "1.90"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/tunamaguro/pseudo-backtrace"
