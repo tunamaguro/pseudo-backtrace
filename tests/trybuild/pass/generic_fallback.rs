@@ -1,5 +1,4 @@
 use pseudo_backtrace::StackError;
-use pseudo_backtrace::StackError as StackErrorTrait;
 
 #[track_caller]
 fn location() -> &'static core::panic::Location<'static> {
@@ -8,7 +7,7 @@ fn location() -> &'static core::panic::Location<'static> {
 
 #[derive(Debug, StackError)]
 pub struct LeafError {
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: std::io::Error,
     location: &'static core::panic::Location<'static>,
 }
@@ -38,7 +37,7 @@ pub struct GenericWrapper<T> {
 
 impl<T> GenericWrapper<T>
 where
-    T: StackErrorTrait,
+    T: StackError,
 {
     pub fn new(source: T) -> Self {
         Self {
@@ -59,7 +58,7 @@ where
 
 impl<T> core::error::Error for GenericWrapper<T>
 where
-    T: StackErrorTrait + core::fmt::Display + core::fmt::Debug,
+    T: StackError + core::fmt::Display + core::fmt::Debug,
 {
 }
 
@@ -101,7 +100,7 @@ impl core::fmt::Display for MixedEnum {
 
 impl core::error::Error for MixedEnum {}
 
-fn assert_stack_error<T: StackErrorTrait>() {}
+fn assert_stack_error<T: StackError>() {}
 
 pub fn smoke() {
     let leaf = LeafError::new();

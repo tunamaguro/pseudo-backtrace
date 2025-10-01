@@ -2,7 +2,7 @@ use pseudo_backtrace::StackError;
 
 #[derive(Debug, StackError)]
 struct MissingLocation {
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: std::io::Error,
 }
 

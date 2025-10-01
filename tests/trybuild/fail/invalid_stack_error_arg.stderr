@@ -1,0 +1,5 @@
+error: invalid #[stack_error] attribute: expected `std` or `stacked`
+ --> tests/trybuild/fail/invalid_stack_error_arg.rs:5:5
+  |
+5 |     #[stack_error(foo)]
+  |     ^^^^^^^^^^^^^^^^^^^

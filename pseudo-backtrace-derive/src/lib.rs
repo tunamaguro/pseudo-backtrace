@@ -56,7 +56,11 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
 
     let location_member = &fields[location_index].member;
     let next_body = match &source {
-        Some(info) => build_next_struct(&fields[info.index].member, info.is_terminal),
+        Some(info) => build_next_struct(
+            &fields[info.index].member,
+            &fields[info.index].ty,
+            info.is_terminal,
+        ),
         None => quote! { ::core::option::Option::None },
     };
 
@@ -68,7 +72,9 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
                 self.#location_member
             }
 
-            fn next<'a>(&'a self) -> ::core::option::Option<::pseudo_backtrace::Chain<'a>> {
+            fn next<'pseudo_backtrace>(&'pseudo_backtrace self) -> ::core::option::Option<::pseudo_backtrace::Chain<'pseudo_backtrace>> {
+                use ::pseudo_backtrace::private::AsDynStdError as _;
+                use ::pseudo_backtrace::private::AsDynStackError as _;
                 #next_body
             }
         }
@@ -176,7 +182,9 @@ fn expand_enum(ident: Ident, generics: Generics, data: DataEnum) -> syn::Result<
                 }
             }
 
-            fn next<'a>(&'a self) -> ::core::option::Option<::pseudo_backtrace::Chain<'a>> {
+            fn next<'pseudo_backtrace>(&'pseudo_backtrace self) -> ::core::option::Option<::pseudo_backtrace::Chain<'pseudo_backtrace>> {
+                use ::pseudo_backtrace::private::AsDynStdError as _;
+                use ::pseudo_backtrace::private::AsDynStackError as _;
                 match self {
                     #(#next_arms,)*
                 }
@@ -294,20 +302,32 @@ fn parse_field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
         if attr.path().is_ident("stack_error") {
             match attr.parse_args_with(|input: syn::parse::ParseStream| {
                 let ident: Ident = input.parse()?;
-                if ident == "end" {
-                    Ok(())
+                if ident == "std" {
+                    Ok((true, ident.span()))
+                } else if ident == "stacked" {
+                    Ok((false, ident.span()))
                 } else {
-                    Err(syn::Error::new(ident.span(), "expected `end`"))
+                    Err(syn::Error::new(ident.span(), "expected `std` or `stacked`"))
                 }
             }) {
-                Ok(()) => {
-                    if attrs.is_terminal {
-                        return Err(syn::Error::new_spanned(
-                            attr,
-                            "duplicate #[stack_error(end)] attribute",
-                        ));
+                Ok((is_std, _span)) => {
+                    if is_std {
+                        if attrs.is_terminal {
+                            return Err(syn::Error::new_spanned(
+                                attr,
+                                "duplicate #[stack_error(std)] attribute",
+                            ));
+                        }
+                        attrs.is_terminal = true;
+                    } else {
+                        if attrs.is_source {
+                            return Err(syn::Error::new_spanned(
+                                attr,
+                                "duplicate #[stack_error(stacked)] attribute",
+                            ));
+                        }
+                        attrs.is_source = true;
                     }
-                    attrs.is_terminal = true;
                 }
                 Err(err) => {
                     return Err(syn::Error::new_spanned(
@@ -396,7 +416,7 @@ fn resolve_source(fields: &[FieldInfo], allow_name: bool) -> syn::Result<Option<
         let span = fields[terminal_candidates[1]].span;
         return Err(syn::Error::new(
             span,
-            "multiple fields marked with #[stack_error(end)]",
+            "multiple fields marked with #[stack_error(std)]",
         ));
     }
 
@@ -422,17 +442,31 @@ fn resolve_source(fields: &[FieldInfo], allow_name: bool) -> syn::Result<Option<
     Ok(None)
 }
 
-fn build_next_struct(member: &Member, is_terminal: bool) -> TokenStream2 {
+fn build_next_struct(member: &Member, ty: &syn::Type, is_terminal: bool) -> TokenStream2 {
     if is_terminal {
+        if type_parameter_of_option(ty).is_some() {
+            quote! {
+                self.#member
+                    .as_ref()
+                    .map(|__s| ::pseudo_backtrace::Chain::Std(__s.as_dyn_std_error()))
+            }
+        } else {
+            quote! {
+                ::core::option::Option::Some(::pseudo_backtrace::Chain::Std(
+                    self.#member.as_dyn_std_error(),
+                ))
+            }
+        }
+    } else if type_parameter_of_option(ty).is_some() {
         quote! {
-            ::core::option::Option::Some(::pseudo_backtrace::Chain::Std(
-                &self.#member as &'a dyn ::core::error::Error,
-            ))
+            self.#member
+                .as_ref()
+                .map(|__s| ::pseudo_backtrace::Chain::Stacked(__s.as_dyn_stack_error()))
         }
     } else {
         quote! {
             ::core::option::Option::Some(::pseudo_backtrace::Chain::Stacked(
-                &self.#member as &'a dyn ::pseudo_backtrace::StackError,
+                self.#member.as_dyn_stack_error(),
             ))
         }
     }
@@ -511,22 +545,60 @@ impl VariantInfo {
                     .source_binding
                     .as_ref()
                     .expect("source binding missing");
+                let ty = &self.fields[source.index].ty;
                 if source.is_terminal {
+                    if type_parameter_of_option(ty).is_some() {
+                        quote! {
+                            #binding
+                                .as_ref()
+                                .map(|__s| ::pseudo_backtrace::Chain::Std(__s.as_dyn_std_error()))
+                        }
+                    } else {
+                        quote! {
+                            ::core::option::Option::Some(::pseudo_backtrace::Chain::Std(
+                                #binding.as_dyn_std_error(),
+                            ))
+                        }
+                    }
+                } else if type_parameter_of_option(ty).is_some() {
                     quote! {
-                        ::core::option::Option::Some(::pseudo_backtrace::Chain::Std(
-                            #binding as &'a dyn ::core::error::Error,
-                        ))
+                        #binding
+                            .as_ref()
+                            .map(|__s| ::pseudo_backtrace::Chain::Stacked(__s.as_dyn_stack_error()))
                     }
                 } else {
                     quote! {
                         ::core::option::Option::Some(::pseudo_backtrace::Chain::Stacked(
-                            #binding as &'a dyn ::pseudo_backtrace::StackError,
+                            #binding.as_dyn_stack_error(),
                         ))
                     }
                 }
             }
             None => quote! { ::core::option::Option::None },
         }
+    }
+}
+
+// Detect Option<T> and return T if present
+fn type_parameter_of_option(ty: &syn::Type) -> Option<&syn::Type> {
+    let path = match ty {
+        syn::Type::Path(ty) => &ty.path,
+        _ => return None,
+    };
+    let last = path.segments.last()?;
+    if last.ident != "Option" {
+        return None;
+    }
+    let args = match &last.arguments {
+        syn::PathArguments::AngleBracketed(args) => args,
+        _ => return None,
+    };
+    if args.args.len() != 1 {
+        return None;
+    }
+    match &args.args[0] {
+        syn::GenericArgument::Type(inner) => Some(inner),
+        _ => None,
     }
 }
 

@@ -1,5 +1,4 @@
 use pseudo_backtrace::StackError;
-use pseudo_backtrace::StackError as StackErrorTrait;
 
 #[track_caller]
 fn location() -> &'static core::panic::Location<'static> {
@@ -8,7 +7,7 @@ fn location() -> &'static core::panic::Location<'static> {
 
 #[derive(Debug, StackError)]
 pub struct TerminalError {
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: std::io::Error,
     #[location]
     location: &'static core::panic::Location<'static>,
@@ -60,7 +59,7 @@ impl core::fmt::Display for EnumError {
 
 impl core::error::Error for EnumError {}
 
-fn assert_stack_error<T: StackErrorTrait>() {}
+fn assert_stack_error<T: StackError>() {}
 
 pub fn smoke() {
     assert_stack_error::<TerminalError>();

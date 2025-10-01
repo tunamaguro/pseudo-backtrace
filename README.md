@@ -25,7 +25,7 @@ impl core::error::Error for ErrorA {}
 
 #[derive(Debug, StackError)]
 pub struct ErrorB {
-    #[stack_error(end)]
+    #[stack_error(std)]
     source: ErrorA,
     location: &'static core::panic::Location<'static>,
 }
@@ -95,12 +95,18 @@ impl From<ErrorB> for ErrorC {
 ```
 
 ## Using `#[derive(StackError)]`
-Deriving requires three kinds of fields:
 
-- `#[location]` for an `&'static core::panic::Location<'static>` captured with `#[track_caller]`.
-- `#[source]` for the next layer that also implements `StackError`.
-- `#[stack_error(end)]` for a terminal source that only implements `std::error::Error`.
+Deriving `StackError` requires two types of fields:
 
-The macro infers `#[location]` and `#[source]` from the field names `location` and `source` when attributes are omitted. Unit structs and variants are rejected because they cannot point to a location.
+1. **Required Field**:
+   - A field holding a `&'static core::panic::Location<'static>`. This is mandatory.
+   - The field can be named `location` or marked with the `#[location]` attribute.
 
-Since the macro only implements `StackError`, the [Error] implementation must be provided by the user.
+2. **Optional Field**:
+   - A field representing the next error in the stack trace. This field is optional.
+   - It can be marked with either:
+     - `#[stack_error(std)]`: Treats the next error as a type implementing `core::error::Error`.
+     - `#[stack_error(stacked)]`: Treats the next error as a type implementing `StackError`.
+     - `#[source]` or a field named `source`: Defaults to `#[stack_error(stacked)]`.
+
+Note that the macro only implements `StackError`, so users must manually implement `core::error::Error`.
