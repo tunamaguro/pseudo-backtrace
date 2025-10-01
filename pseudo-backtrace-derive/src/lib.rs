@@ -72,7 +72,7 @@ fn expand_struct(ident: Ident, generics: Generics, data: DataStruct) -> syn::Res
                 self.#location_member
             }
 
-            fn next<'__stack_a>(&'__stack_a self) -> ::core::option::Option<::pseudo_backtrace::Chain<'__stack_a>> {
+            fn next<'pseudo_backtrace>(&'pseudo_backtrace self) -> ::core::option::Option<::pseudo_backtrace::Chain<'pseudo_backtrace>> {
                 use ::pseudo_backtrace::private::AsDynStdError as _;
                 use ::pseudo_backtrace::private::AsDynStackError as _;
                 #next_body
@@ -182,7 +182,7 @@ fn expand_enum(ident: Ident, generics: Generics, data: DataEnum) -> syn::Result<
                 }
             }
 
-            fn next<'__stack_a>(&'__stack_a self) -> ::core::option::Option<::pseudo_backtrace::Chain<'__stack_a>> {
+            fn next<'pseudo_backtrace>(&'pseudo_backtrace self) -> ::core::option::Option<::pseudo_backtrace::Chain<'pseudo_backtrace>> {
                 use ::pseudo_backtrace::private::AsDynStdError as _;
                 use ::pseudo_backtrace::private::AsDynStackError as _;
                 match self {
