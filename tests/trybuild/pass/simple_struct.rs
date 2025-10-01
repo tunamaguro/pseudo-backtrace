@@ -1,5 +1,4 @@
 use pseudo_backtrace::StackError;
-use pseudo_backtrace::StackError as StackErrorTrait;
 
 #[track_caller]
 fn location() -> &'static core::panic::Location<'static> {
@@ -56,7 +55,7 @@ impl core::fmt::Display for WrappedError {
 
 impl core::error::Error for WrappedError {}
 
-fn assert_stack_error<T: StackErrorTrait>() {}
+fn assert_stack_error<T: StackError>() {}
 
 pub fn smoke() {
     let leaf = LeafError::new();
