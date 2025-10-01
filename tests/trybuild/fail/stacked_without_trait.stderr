@@ -1,0 +1,21 @@
+error[E0599]: the method `as_dyn_stack_error` exists for struct `NotStacked`, but its trait bounds were not satisfied
+  --> tests/trybuild/fail/stacked_without_trait.rs:12:17
+   |
+ 4 | struct NotStacked(std::io::Error);
+   | ----------------- method `as_dyn_stack_error` not found for this struct because it doesn't satisfy `NotStacked: AsDynStackError<'_>` or `NotStacked: StackError`
+...
+12 | #[derive(Debug, StackError)]
+   |                 ^^^^^^^^^^
+   |
+   = note: the following trait bounds were not satisfied:
+           `NotStacked: StackError`
+           which is required by `NotStacked: AsDynStackError<'_>`
+note: the trait `StackError` must be implemented
+  --> src/lib.rs
+   |
+   | pub trait StackError: core::error::Error {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: items from traits can only be used if the trait is implemented and in scope
+   = note: the following trait defines an item `as_dyn_stack_error`, perhaps you need to implement it:
+           candidate #1: `AsDynStackError`
+   = note: this error originates in the derive macro `StackError` (in Nightly builds, run with -Z macro-backtrace for more info)
