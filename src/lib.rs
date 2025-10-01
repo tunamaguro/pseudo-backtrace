@@ -6,19 +6,19 @@ pub use pseudo_backtrace_derive::StackError;
 
 /// One layer in a stack of chained errors.
 #[derive(Debug, Clone)]
-pub enum ErrorChain<'a> {
+pub enum Chain<'a> {
     /// A stacked error
     Stacked(&'a dyn StackError),
     /// A [core::error::Error].
     Std(&'a dyn core::error::Error),
 }
 
-impl<'a> ErrorChain<'a> {
+impl<'a> Chain<'a> {
     /// Returns lower-level error
-    pub fn next(&self) -> Option<ErrorChain<'a>> {
+    pub fn next(&self) -> Option<Chain<'a>> {
         match self {
-            ErrorChain::Stacked(stack_error) => stack_error.next(),
-            ErrorChain::Std(error) => error.source().map(ErrorChain::Std),
+            Chain::Stacked(stack_error) => stack_error.next(),
+            Chain::Std(error) => error.source().map(Chain::Std),
         }
     }
 
@@ -30,43 +30,43 @@ impl<'a> ErrorChain<'a> {
     /// Returns the underlying error for this stack layer.
     pub const fn inner(&'a self) -> &'a dyn core::error::Error {
         match self {
-            ErrorChain::Stacked(stack_error) => stack_error,
-            ErrorChain::Std(error) => error,
+            Chain::Stacked(stack_error) => stack_error,
+            Chain::Std(error) => error,
         }
     }
 
     /// Returns the recorded source location when available.
     pub fn location(&self) -> Option<&'static core::panic::Location<'static>> {
         match self {
-            ErrorChain::Stacked(stack_error) => Some(stack_error.location()),
+            Chain::Stacked(stack_error) => Some(stack_error.location()),
             _ => None,
         }
     }
 }
 
-impl core::fmt::Display for ErrorChain<'_> {
+impl core::fmt::Display for Chain<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            ErrorChain::Stacked(stack_error) => {
+            Chain::Stacked(stack_error) => {
                 write!(f, "{}, at {}", stack_error, stack_error.location())
             }
-            ErrorChain::Std(error) => error.fmt(f),
+            Chain::Std(error) => error.fmt(f),
         }
     }
 }
 
-impl core::error::Error for ErrorChain<'_> {
+impl core::error::Error for Chain<'_> {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         self.inner().source()
     }
 }
 
-impl<'a, E> From<&'a E> for ErrorChain<'a>
+impl<'a, E> From<&'a E> for Chain<'a>
 where
     E: StackError + Sized,
 {
     fn from(stack_error: &'a E) -> Self {
-        ErrorChain::Stacked(stack_error)
+        Chain::Stacked(stack_error)
     }
 }
 
@@ -75,7 +75,7 @@ pub trait StackError: core::error::Error {
     /// Returns the source location of this error.
     fn location(&self) -> &'static core::panic::Location<'static>;
     /// Returns the next detail in the stack.
-    fn next<'a>(&'a self) -> Option<ErrorChain<'a>>;
+    fn next<'a>(&'a self) -> Option<Chain<'a>>;
     /// Creates an iterator over this error's stack details.
     fn iter<'a>(&'a self) -> Iter<'a>
     where
@@ -88,7 +88,7 @@ pub trait StackError: core::error::Error {
 /// Iterator over individual error stack entries.
 #[derive(Debug, Clone)]
 pub struct Iter<'a> {
-    stack: Option<ErrorChain<'a>>,
+    stack: Option<Chain<'a>>,
 }
 
 impl<'a> Iter<'a> {
@@ -97,13 +97,13 @@ impl<'a> Iter<'a> {
         E: StackError,
     {
         Iter {
-            stack: Some(ErrorChain::Stacked(source)),
+            stack: Some(Chain::Stacked(source)),
         }
     }
 }
 
 impl<'a> Iterator for Iter<'a> {
-    type Item = ErrorChain<'a>;
+    type Item = Chain<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.stack.take() {
@@ -168,8 +168,8 @@ where
         self.location
     }
 
-    fn next<'a>(&'a self) -> Option<ErrorChain<'a>> {
-        self.source.source().map(ErrorChain::Std)
+    fn next<'a>(&'a self) -> Option<Chain<'a>> {
+        self.source.source().map(Chain::Std)
     }
 }
 
@@ -183,11 +183,11 @@ impl<E> From<E> for LocatedError<E> {
     }
 }
 
-/// Helper for display [ErrorChain]
+/// Helper for display [Chain]
 #[derive(Debug, Clone)]
 pub struct ChainWriter<'a> {
     std_limit: usize,
-    stack: ErrorChain<'a>,
+    stack: Chain<'a>,
 }
 
 impl<'a> core::fmt::Display for ChainWriter<'a> {
@@ -245,11 +245,11 @@ pub trait StackErrorExt: StackError + Sized {
     fn to_chain_with_limit<'a>(&'a self, limit: usize) -> ChainWriter<'a> {
         ChainWriter {
             std_limit: limit,
-            stack: ErrorChain::from(self),
+            stack: Chain::from(self),
         }
     }
 
-    /// Returns the deepest [ErrorChain] in the chain.
+    /// Returns the deepest [Chain] in the chain.
     /// ## Example
     ///
     /// ```ignore
@@ -260,11 +260,11 @@ pub trait StackErrorExt: StackError + Sized {
     /// 4: StdError B
     /// 5: StdError C <- Return this
     /// ```
-    fn last<'a>(&'a self) -> ErrorChain<'a>
+    fn last<'a>(&'a self) -> Chain<'a>
     where
         Self: Sized,
     {
-        self.iter().last().unwrap_or(ErrorChain::from(self))
+        self.iter().last().unwrap_or(Chain::from(self))
     }
 
     /// Returns the deepest [StackError] in the chain
@@ -282,7 +282,7 @@ pub trait StackErrorExt: StackError + Sized {
     fn last_stacked<'a>(&'a self) -> &'a dyn StackError {
         self.iter()
             .filter_map(|e| match e {
-                ErrorChain::Stacked(stack_error) => Some(stack_error),
+                Chain::Stacked(stack_error) => Some(stack_error),
                 _ => None,
             })
             .last()
@@ -304,7 +304,7 @@ pub trait StackErrorExt: StackError + Sized {
     fn last_std<'a>(&'a self) -> Option<&'a dyn core::error::Error> {
         self.iter()
             .filter_map(|e| match e {
-                ErrorChain::Std(error) => Some(error),
+                Chain::Std(error) => Some(error),
                 _ => None,
             })
             .next()
