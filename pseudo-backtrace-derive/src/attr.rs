@@ -55,11 +55,13 @@ impl<'a> Attrs<'a> {
 
 #[derive(Clone)]
 pub struct Source<'a> {
+    #[allow(unused)]
     pub original: &'a Attribute,
 }
 
 #[derive(Clone)]
 pub struct Location<'a> {
+    #[allow(unused)]
     pub original: &'a Attribute,
 }
 
@@ -90,6 +92,7 @@ impl Parse for StackErrorKind {
 
 #[derive(Clone)]
 pub struct StackError<'a> {
+    #[allow(unused)]
     pub original: &'a Attribute,
     pub kind: StackErrorKind,
 }

@@ -1,5 +1,5 @@
 use proc_macro2::Span;
-use syn::{Error, Generics, Ident, Index, Member, Result};
+use syn::{Error, Generics, Ident, Index, Member, Result, spanned::Spanned};
 
 use crate::attr::Attrs;
 
@@ -20,8 +20,15 @@ impl<'a> Input<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ContainerKind {
+    Struct,
+    Tuple,
+}
+
 #[derive(Clone)]
 pub struct Struct<'a> {
+    pub span: Span,
     pub ident: Ident,
     pub generics: &'a Generics,
     pub fields: Vec<Field<'a>>,
@@ -31,6 +38,7 @@ impl<'a> Struct<'a> {
     pub fn from_syn(input: &'a syn::DeriveInput, data: &'a syn::DataStruct) -> Result<Self> {
         let fields = Field::from_fields(&data.fields)?;
         Ok(Self {
+            span: input.span(),
             ident: input.ident.clone(),
             generics: &input.generics,
             fields,
@@ -74,6 +82,18 @@ impl<'a> Variant<'a> {
             ident: input.ident.clone(),
             fields: Field::from_fields(&input.fields)?,
         })
+    }
+
+    pub fn kind(&self) -> ContainerKind {
+        if self
+            .fields
+            .iter()
+            .any(|f| matches!(f.member, Member::Unnamed(_)))
+        {
+            ContainerKind::Tuple
+        } else {
+            ContainerKind::Struct
+        }
     }
 }
 
