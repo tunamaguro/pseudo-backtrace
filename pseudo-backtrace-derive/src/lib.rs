@@ -3,10 +3,7 @@ mod attr;
 mod expand;
 
 use proc_macro::TokenStream;
-use syn::{
-    DeriveInput,
-    parse_macro_input,
-};
+use syn::{DeriveInput, parse_macro_input};
 
 #[proc_macro_derive(StackError, attributes(source, stack_error, location))]
 pub fn derive_stack_error(input: TokenStream) -> TokenStream {
