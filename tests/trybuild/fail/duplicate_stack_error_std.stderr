@@ -1,4 +1,4 @@
-error: duplicate #[stack_error(std)] attribute
+error: duplicate `#[stack_error(...)]` attribute
  --> tests/trybuild/fail/duplicate_stack_error_std.rs:6:5
   |
 6 |     #[stack_error(std)]

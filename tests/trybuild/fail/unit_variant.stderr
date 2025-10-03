@@ -1,4 +1,4 @@
-error: unit variants do not support #[derive(StackError)]
+error: unit struct and unit variant are not supported
  --> tests/trybuild/fail/unit_variant.rs:5:5
   |
 5 |     First,

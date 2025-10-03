@@ -1,4 +1,4 @@
-error: missing #[location] attribute or field named `location`
+error: need `#[location]` attribute or field named `location`
  --> tests/trybuild/fail/missing_location.rs:4:8
   |
 4 | struct MissingLocation {
