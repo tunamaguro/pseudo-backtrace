@@ -1,5 +1,6 @@
-error: multiple fields marked with #[source]
+error: duplicate `#[source]` or `#[stack_error]` attribute
   --> tests/trybuild/fail/duplicate_source.rs:12:5
    |
-12 |     #[source]
-   |     ^
+12 | /     #[source]
+13 | |     second: std::io::Error,
+   | |__________________________^

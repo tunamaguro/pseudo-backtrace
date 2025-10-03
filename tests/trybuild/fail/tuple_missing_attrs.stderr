@@ -1,4 +1,4 @@
-error: missing #[location] attribute or field named `location`
+error: need `#[location]` attribute or field named `location`
  --> tests/trybuild/fail/tuple_missing_attrs.rs:4:8
   |
 4 | struct TupleMissingAttrs(std::io::Error, &'static core::panic::Location<'static>);

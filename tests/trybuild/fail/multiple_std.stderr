@@ -1,5 +1,6 @@
-error: multiple fields marked with #[stack_error(std)]
+error: duplicate `#[source]` or `#[stack_error]` attribute
  --> tests/trybuild/fail/multiple_std.rs:7:5
   |
-7 |     #[stack_error(std)]
-  |     ^
+7 | /     #[stack_error(std)]
+8 | |     second: std::io::Error,
+  | |__________________________^
