@@ -1,5 +1,5 @@
 use proc_macro2::Span;
-use syn::{Error, Generics, Ident, Index, Member, Result, spanned::Spanned};
+use syn::{Error, Generics, Ident, Index, Member, Result};
 
 use crate::attr::Attrs;
 
@@ -28,7 +28,6 @@ pub enum ContainerKind {
 
 #[derive(Clone)]
 pub struct Struct<'a> {
-    pub span: Span,
     pub ident: Ident,
     pub generics: &'a Generics,
     pub fields: Vec<Field<'a>>,
@@ -36,9 +35,8 @@ pub struct Struct<'a> {
 
 impl<'a> Struct<'a> {
     pub fn from_syn(input: &'a syn::DeriveInput, data: &'a syn::DataStruct) -> Result<Self> {
-        let fields = Field::from_fields(&data.fields)?;
+        let fields = Field::from_fields(&data.fields, &input.ident)?;
         Ok(Self {
-            span: input.span(),
             ident: input.ident.clone(),
             generics: &input.generics,
             fields,
@@ -80,7 +78,7 @@ impl<'a> Variant<'a> {
         Ok(Self {
             original: input,
             ident: input.ident.clone(),
-            fields: Field::from_fields(&input.fields)?,
+            fields: Field::from_fields(&input.fields, &input.ident)?,
         })
     }
 
@@ -106,10 +104,10 @@ pub struct Field<'a> {
 }
 
 impl<'a> Field<'a> {
-    pub fn from_fields(fields: &'a syn::Fields) -> Result<Vec<Self>> {
+    pub fn from_fields(fields: &'a syn::Fields, ident: &Ident) -> Result<Vec<Self>> {
         if matches!(fields, syn::Fields::Unit) {
             return Err(Error::new_spanned(
-                fields,
+                ident,
                 "unit struct and unit variant are not supported",
             ));
         }

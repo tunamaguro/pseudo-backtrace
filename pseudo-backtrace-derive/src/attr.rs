@@ -73,6 +73,7 @@ pub enum StackErrorKind {
 
 impl Parse for StackErrorKind {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let source_span = input.span();
         let ident: Ident = input.parse()?;
         if ident == "std" {
             Ok(Self::Std)
@@ -80,7 +81,7 @@ impl Parse for StackErrorKind {
             Ok(Self::Stacked)
         } else {
             Err(Error::new(
-                input.span(),
+                source_span,
                 format!(
                     "invalid `#[stack_error({})]` attribute. expected `std` or `stacked`",
                     ident

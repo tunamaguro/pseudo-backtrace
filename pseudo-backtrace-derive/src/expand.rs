@@ -1,6 +1,6 @@
 use proc_macro2::Span;
 use quote::quote;
-use syn::{Error, Ident, Result, spanned::Spanned};
+use syn::{Error, Ident, Result};
 
 use crate::{
     ast::{Enum, Field, Input, Struct, Variant},
@@ -30,7 +30,7 @@ impl Field<'_> {
 
 impl Struct<'_> {
     fn location_fn(&self) -> Result<proc_macro2::TokenStream> {
-        let location = find_location(&self.fields, self.span)?;
+        let location = find_location(&self.fields, self.ident.span())?;
         let location_member = location.member.clone();
 
         let body = if location.is_located_error() {
@@ -162,7 +162,7 @@ impl Variant<'_> {
 
     fn location_body(&self) -> Result<proc_macro2::TokenStream> {
         let variant_ident = self.ident.clone();
-        let location = find_location(&self.fields, self.original.span())?;
+        let location = find_location(&self.fields, self.ident.span())?;
 
         // Build a pattern that binds the location field to a local ident
         let binding = quote::format_ident!("__stack_error_location");
