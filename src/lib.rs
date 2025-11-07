@@ -295,7 +295,7 @@ pub trait StackErrorExt: StackError {
     fn first_std(&self) -> Option<&dyn core::error::Error>;
 }
 
-impl<T: StackError> StackErrorExt for T {
+impl StackErrorExt for dyn StackError {
     fn to_chain_with_limit<'a>(&'a self, limit: usize) -> ChainWriter<'a> {
         ChainWriter {
             std_limit: limit,
@@ -333,41 +333,25 @@ impl<T: StackError> StackErrorExt for T {
     }
 }
 
-impl StackErrorExt for dyn StackError {
+impl<T: StackError> StackErrorExt for T {
     fn to_chain_with_limit<'a>(&'a self, limit: usize) -> ChainWriter<'a> {
-        ChainWriter {
-            std_limit: limit,
-            stack: Chain::Stacked(self),
-        }
+        let cur: &dyn StackErrorExt = self;
+        cur.to_chain_with_limit(limit)
     }
 
     fn last<'a>(&'a self) -> Chain<'a> {
-        let mut cur = Chain::Stacked(self);
-        while let Some(next) = cur.next() {
-            cur = next;
-        }
-        cur
+        let cur: &dyn StackErrorExt = self;
+        cur.last()
     }
 
     fn last_stacked(&self) -> &dyn StackError {
-        let mut last: &dyn StackError = self;
-        while let Some(Chain::Stacked(next)) = last.next() {
-            last = next;
-        }
-
-        last
+        let cur: &dyn StackErrorExt = self;
+        cur.last_stacked()
     }
 
     fn first_std(&self) -> Option<&dyn core::error::Error> {
-        let mut cur = Chain::Stacked(self);
-        while let Some(next) = cur.next() {
-            if let Chain::Std(e) = next {
-                return Some(e);
-            }
-            cur = next;
-        }
-
-        None
+        let cur: &dyn StackErrorExt = self;
+        cur.first_std()
     }
 }
 
