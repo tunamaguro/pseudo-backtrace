@@ -215,7 +215,7 @@ impl<'a> core::fmt::Display for ChainWriter<'a> {
 }
 
 /// Convenience helpers for types implementing [StackError].
-pub trait StackErrorExt: StackError + Sized {
+pub trait StackErrorExt: StackError {
     /// Returns a [ChainWriter] that walks this error stack from the top and prints a single trailing non- [StackError] source when formatting.
     ///
     /// ## Example
@@ -251,12 +251,7 @@ pub trait StackErrorExt: StackError + Sized {
     /// // 1: StackError B, at src/main.rs:19:5
     /// // 2: StackError C, at src/main.rs:18:5  
     /// ```
-    fn to_chain_with_limit<'a>(&'a self, limit: usize) -> ChainWriter<'a> {
-        ChainWriter {
-            std_limit: limit,
-            stack: Chain::from(self),
-        }
-    }
+    fn to_chain_with_limit<'a>(&'a self, limit: usize) -> ChainWriter<'a>;
 
     /// Returns the deepest [Chain] in the chain.
     /// ## Example
@@ -269,12 +264,7 @@ pub trait StackErrorExt: StackError + Sized {
     /// 4: StdError B
     /// 5: StdError C <- Return this
     /// ```
-    fn last<'a>(&'a self) -> Chain<'a>
-    where
-        Self: Sized,
-    {
-        self.iter().last().unwrap_or(Chain::from(self))
-    }
+    fn last<'a>(&'a self) -> Chain<'a>;
 
     /// Returns the deepest [StackError] in the chain
     ///
@@ -288,15 +278,7 @@ pub trait StackErrorExt: StackError + Sized {
     /// 4: StdError B
     /// 5: StdError C
     /// ```
-    fn last_stacked(&self) -> &dyn StackError {
-        self.iter()
-            .filter_map(|e| match e {
-                Chain::Stacked(stack_error) => Some(stack_error),
-                _ => None,
-            })
-            .last()
-            .unwrap_or(self)
-    }
+    fn last_stacked(&self) -> &dyn StackError;
 
     /// Returns the first [core::error::Error] in the chain
     ///
@@ -310,17 +292,84 @@ pub trait StackErrorExt: StackError + Sized {
     /// 4: StdError B
     /// 5: StdError C
     /// ```
+    fn first_std(&self) -> Option<&dyn core::error::Error>;
+}
+
+impl<T: StackError> StackErrorExt for T {
+    fn to_chain_with_limit<'a>(&'a self, limit: usize) -> ChainWriter<'a> {
+        ChainWriter {
+            std_limit: limit,
+            stack: Chain::Stacked(self),
+        }
+    }
+
+    fn last<'a>(&'a self) -> Chain<'a> {
+        let mut cur = Chain::Stacked(self);
+        while let Some(next) = cur.next() {
+            cur = next;
+        }
+        cur
+    }
+
+    fn last_stacked(&self) -> &dyn StackError {
+        let mut last: &dyn StackError = self;
+        while let Some(Chain::Stacked(next)) = last.next() {
+            last = next;
+        }
+
+        last
+    }
+
     fn first_std(&self) -> Option<&dyn core::error::Error> {
-        self.iter()
-            .filter_map(|e| match e {
-                Chain::Std(error) => Some(error),
-                _ => None,
-            })
-            .next()
+        let mut cur = Chain::Stacked(self);
+        while let Some(next) = cur.next() {
+            if let Chain::Std(e) = next {
+                return Some(e);
+            }
+            cur = next;
+        }
+
+        None
     }
 }
 
-impl<E: StackError> StackErrorExt for E {}
+impl StackErrorExt for dyn StackError {
+    fn to_chain_with_limit<'a>(&'a self, limit: usize) -> ChainWriter<'a> {
+        ChainWriter {
+            std_limit: limit,
+            stack: Chain::Stacked(self),
+        }
+    }
+
+    fn last<'a>(&'a self) -> Chain<'a> {
+        let mut cur = Chain::Stacked(self);
+        while let Some(next) = cur.next() {
+            cur = next;
+        }
+        cur
+    }
+
+    fn last_stacked(&self) -> &dyn StackError {
+        let mut last: &dyn StackError = self;
+        while let Some(Chain::Stacked(next)) = last.next() {
+            last = next;
+        }
+
+        last
+    }
+
+    fn first_std(&self) -> Option<&dyn core::error::Error> {
+        let mut cur = Chain::Stacked(self);
+        while let Some(next) = cur.next() {
+            if let Chain::Std(e) = next {
+                return Some(e);
+            }
+            cur = next;
+        }
+
+        None
+    }
+}
 
 #[cfg(test)]
 mod tests {
